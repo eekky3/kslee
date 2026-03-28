@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>22사단 급여 및 적금 통합 계산기</title>
+    <!-- 토스 스타일의 깔끔한 폰트(Pretendard) 적용 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <style>
+        :root {
+            /* 토스 다크모드 컬러 팔레트 */
+            --bg-color: #121212;
+            --surface-color: #1C1C1E;
+            --surface-hover: #2C2C2E;
+            --primary-color: #3182F6; /* 토스 블루 */
+            --text-main: #F2F2F6;
+            --text-sub: #A1A1A6;
+            --border-color: #3A3A3C;
+            --radius-large: 24px;
+            --radius-medium: 16px;
+            --radius-small: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* 모바일 꽉 차게, PC에서는 모바일 사이즈로 중앙 정렬 */
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            padding-bottom: 180px; /* 하단 고정 결과창 공간 확보 */
+        }
+
+        header {
+            padding: 32px 24px 16px;
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            font-size: 15px;
+            color: var(--text-sub);
+        }
+
+        .section {
+            padding: 20px 24px;
+        }
+
+        .section-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-main);
+        }
+
+        /* 세그먼트 컨트롤 (버튼형 라디오) */
+        .segmented-control {
+            display: flex;
+            gap: 8px;
+            background-color: var(--surface-color);
+            padding: 6px;
+            border-radius: var(--radius-medium);
+        }
+
+        .segmented-control label {
+            flex: 1;
+            text-align: center;
+            padding: 14px 0;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-sub);
+            border-radius: var(--radius-small);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .segmented-control input[type="radio"] {
+            display: none;
+        }
+
+        .segmented-control input[type="radio"]:checked + label {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(49, 130, 246, 0.3);
+        }
+
+        /* 슬라이더 바 */
+        .slider-container {
+            background-color: var(--surface-color);
+            padding: 24px;
+            border-radius: var(--radius-medium);
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .slider-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            background: #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.1);
+        }
+
+        /* 토글 스위치 (체크박스) */
+        .toggle-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--surface-color);
+            padding: 20px 24px;
+            border-radius: var(--radius-medium);
+            cursor: pointer;
+        }
+
+        .toggle-text h3 {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .toggle-text p {
+            font-size: 13px;
+            color: var(--text-sub);
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 52px;
+            height: 32px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--border-color);
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        /* 하단 결과창 (Sticky) */
+        .result-panel {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 480px;
+            background-color: #222224;
+            padding: 28px 24px 36px;
+            border-top-left-radius: var(--radius-large);
+            border-top-right-radius: var(--radius-large);
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.6);
+            z-index: 100;
+        }
+
+        .result-item {
+            margin-bottom: 20px;
+        }
+
+        .result-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .result-label {
+            font-size: 14px;
+            color: var(--text-sub);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .result-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+        }
+
+        .highlight {
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <h1>22사단 간부<br>급여 및 적금 계산기</h1>
+        <p>선택하신 조건에 맞춘 실수령액과 목돈을 확인하세요.</p>
+    </header>
+
+    <!-- 1. 신분 선택 -->
+    <div class="section">
+        <div class="section-title">신분 선택</div>
+        <div class="segmented-control">
+            <input type="radio" name="role" id="role-term" value="term" checked onchange="updateCalculator()">
+            <label for="role-term">임기제 부사관</label>
+            <input type="radio" name="role" id="role-active" value="active" onchange="updateCalculator()">
+            <label for="role-active">현역 부사관</label>
+        </div>
+    </div>
+
+    <!-- 2. 근무지 선택 -->
+    <div class="section">
+        <div class="section-title">근무지 선택</div>
+        <div class="segmented-control">
+            <input type="radio" name="location" id="loc-gop" value="gop" checked onchange="updateCalculator()">
+            <label for="loc-gop">GOP 부대</label>
+            <input type="radio" name="location" id="loc-coast" value="coast" onchange="updateCalculator()">
+            <label for="loc-coast">해안경계</label>
+            <input type="radio" name="location" id="loc-feba" value="feba" onchange="updateCalculator()">
+            <label for="loc-feba">FEBA 부대</label>
+        </div>
+    </div>
+
+    <!-- 3. 복무 개월 수 슬라이더 -->
+    <div class="section">
+        <div class="section-title">복무 개월 수</div>
+        <div class="slider-container">
+            <div class="slider-header">
+                <span style="color: var(--text-sub); font-size: 15px;">복무 기간</span>
+                <span class="slider-value" id="months-display">18개월</span>
+            </div>
+            <input type="range" id="months-slider" min="6" max="48" value="18" oninput="updateSliderUI(this); updateCalculator()">
+        </div>
+    </div>
+
+    <!-- 4. 적금 가입 여부 토글 -->
+    <div class="section">
+        <label class="toggle-container">
+            <div class="toggle-text">
+                <h3>초급간부 적금 가입</h3>
+                <p>월 50만 원 납입 (원금 + 이자 + 매칭지원금)</p>
+            </div>
+            <div class="toggle-switch">
+                <input type="checkbox" id="savings-checkbox" checked onchange="updateCalculator()">
+                <span class="toggle-slider"></span>
+            </div>
+        </label>
+    </div>
+
+    <!-- 5. 하단 결과창 -->
+    <div class="result-panel">
+        <div class="result-item">
+            <div class="result-label">
+                <span>월 세후 실수령액</span>
+                <span style="font-size: 12px;">(세금 및 기여금 15% 공제)</span>
+            </div>
+            <div class="result-value" id="net-pay-result">0원</div>
+        </div>
+        <div class="result-item">
+            <div class="result-label">
+                <span class="highlight">전역 시 모이는 총 목돈</span>
+                <span style="font-size: 12px;" id="savings-desc">(적금 만기 수령액 기준)</span>
+            </div>
+            <div class="result-value highlight" id="total-savings-result">0원</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // [수정 가능한 수치들] - 필요시 여기서 금액을 수정하세요.
+    // ==========================================
+    const BASE_SALARY = 2021500;         // 하사 1호봉 기본급 (임시 설정값)
+    const ALLOWANCE_GOP = 300000;        // GOP 부대 특수수당
+    const ALLOWANCE_COAST = 200000;      // 해안경계 부대 특수수당
+    const ALLOWANCE_FEBA = 0;            // FEBA 부대 특수수당
+    const TAX_RATE = 0.15;               // 세금 및 기여금 일괄 공제율 (15%)
+    
+    const SAVINGS_MONTHLY = 500000;      // 초급간부 적금 월 납입액 (50만 원)
+    const SAVINGS_INTEREST_RATE = 0.05;  // 적금 연 이율 (5% 임시 설정)
+    const SAVINGS_MATCHING_RATE = 1.0;   // 국가 매칭 지원금 비율 (원금의 100% 임시 설정)
+    // ==========================================
+
+    // 애니메이션을 위한 현재 값 저장용 객체
+    const currentValues = {
+        netPay: 0,
+        totalSavings: 0
+    };
+    
+    const animFrames = {
+        netPay: null,
+        totalSavings: null
+    };
+
+    // 숫자에 콤마 찍어주는 함수
+    const formatNumber = (num) => Math.floor(num).toLocaleString() + '원';
+
+    // 슬라이더 배경색(파란색 게이지) 채우기 및 텍스트 업데이트
+    function updateSliderUI(slider) {
+        const val = (slider.value - slider.min) / (slider.max - slider.min) * 100;
+        slider.style.background = `linear-gradient(to right, var(--primary-color) 0%, var(--primary-color) ${val}%, var(--border-color) ${val}%, var(--border-color) 100%)`;
+        document.getElementById('months-display').innerText = slider.value + '개월';
+    }
+
+    // 숫자 부드럽게 올라가는 애니메이션 효과
+    function animateValue(key, elementId, endValue, duration = 600) {
+        const startValue = currentValues[key];
+        const element = document.getElementById(elementId);
+        let startTime = null;
+
+        if (animFrames[key]) cancelAnimationFrame(animFrames[key]);
+
+        const step = (timestamp) => {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            
+            // ease-out-cubic 효과 (끝에서 천천히 멈춤)
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const currentVal = Math.floor(easeOut * (endValue - startValue) + startValue);
+            
+            element.innerText = formatNumber(currentVal);
+
+            if (progress < 1) {
+                animFrames[key] = requestAnimationFrame(step);
+            } else {
+                currentValues[key] = endValue;
+                element.innerText = formatNumber(endValue);
+            }
+        };
+        animFrames[key] = requestAnimationFrame(step);
+    }
+
+    // 핵심 로직: 급여 및 적금 계산
+    function updateCalculator() {
+        // 1. 입력값 가져오기
+        const location = document.querySelector('input[name="location"]:checked').value;
+        const months = parseInt(document.getElementById('months-slider').value);
+        const isSavingsChecked = document.getElementById('savings-checkbox').checked;
+
+        // 2. 수당 계산
+        let allowance = 0;
+        if (location === 'gop') allowance = ALLOWANCE_GOP;
+        else if (location === 'coast') allowance = ALLOWANCE_COAST;
+        else if (location === 'feba') allowance = ALLOWANCE_FEBA;
+
+        // 3. 월 실수령액 계산 (기본급 + 수당 - 15% 공제)
+        const grossPay = BASE_SALARY + allowance;
+        const netPay = grossPay * (1 - TAX_RATE);
+
+        // 4. 총 목돈 계산
+        let totalSavings = 0;
+        const descElement = document.getElementById('savings-desc');
+
+        if (isSavingsChecked) {
+            descElement.innerText = "(적금 원금 + 이자 + 지원금 기준)";
+            descElement.style.color = "var(--text-sub)";
+            
+            // 적금 원금 = 월 납입액 * 개월 수
+            const principal = SAVINGS_MONTHLY * months;
+            
+            // 이자 = 원금 * (개월수+1)/2 * (연이율/12) (단리 방식 근사치 계산)
+            const interest = principal * ((months + 1) / 2) * (SAVINGS_INTEREST_RATE / 12);
+            
+            // 매칭 지원금 = 원금 * 매칭비율
+            const matchingFund = principal * SAVINGS_MATCHING_RATE;
+            
+            totalSavings = principal + interest + matchingFund;
+        } else {
+            descElement.innerText = "(적금 미가입 시 0원)";
+            descElement.style.color = "#FF6B6B"; // 미가입 시 경고성 붉은색 표시
+            totalSavings = 0;
+        }
+
+        // 5. 화면에 애니메이션과 함께 출력
+        animateValue('netPay', 'net-pay-result', netPay);
+        animateValue('totalSavings', 'total-savings-result', totalSavings);
+    }
+
+    // 초기화 실행
+    window.onload = () => {
+        const slider = document.getElementById('months-slider');
+        updateSliderUI(slider);
+        updateCalculator();
+    };
+</script>
+
+</body>
+</html>
